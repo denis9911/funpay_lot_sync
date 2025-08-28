@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Status Page</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+</head>
+<body id="background">
+<div class="soft-panel statuses">
+    <h1>FatCat99 Status Page</h1>
+
+    <div class="input-group">
+        <input type="text" id="search" placeholder="Search (type a game)">
+    </div>
+    <p style="text-align: center;">Current status of all products from our catalog</p>
+
+    <p class="statuses" id="statuses">
+        <span style="color: #06ad00;"><i class="fas fa-check-circle"></i> Undetected</span>
+        <span style="color: #00afff;"><i class="fas fa-arrows-rotate"></i> Updating</span>
+        <span style="color: #ff7700;"><i class="fas fa-circle-exclamation"></i> Risky!</span>
+    </p>
+
+    <div class="status-grid" id="games-grid">
+        {% for game, cheats in data.items() %}
+            {% if cheats %}
+                <!-- Полные карточки -->
+                <div class="cheat-page-link" title="{{ game }}">
+                    <div class="cheats-category-card"
+                         style="background-image: url('{{ images.get(game) or '' }}'); position: relative;">
+                        <h2 class="mb-3">{{ game }}</h2>
+                        <ul>
+                            {% for cheat_name, offers in cheats.items() %}
+                                {% set offer = offers[0] %}
+                                {% if offer.active %}
+                                    {% set status = "Undetected" %}
+                                    {% set color = "#06ad00" %}
+                                    {% set icon = "fa-check-circle" %}
+                                {% elif offer.status == "risky" %}
+                                    {% set status = "Risky!" %}
+                                    {% set color = "#ff7700" %}
+                                    {% set icon = "fa-circle-exclamation" %}
+                                {% else %}
+                                    {% set status = "Updating" %}
+                                    {% set color = "#00afff" %}
+                                    {% set icon = "fa-arrows-rotate" %}
+                                {% endif %}
+                                <li>
+                                    <a href="{{ offer.url }}" target="_blank" title="{{ status }}" style="color: {{ color }}">
+                                        <i class="fas {{ icon }}"></i> {{ cheat_name }}
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Кнопка для пустых игр -->
+    <div style="text-align:center; margin: 20px 0;">
+        <button id="show-empty-btn">Показать пустые игры</button>
+    </div>
+
+    <!-- Сюда будут добавляться пустые игры -->
+    <div class="status-grid" id="empty-games" style="display:none;"></div>
+</div>
+
+
+<script>
+function searchCheats() {
+    let query = document.getElementById("search").value.toLowerCase();
+    document.querySelectorAll(".cheat-page-link").forEach(card => {
+        let title = card.getAttribute("title").toLowerCase();
+        if (title.includes(query)) {
+            card.style.display = "block";
+        } else {
+            card.style.display = "none";
+        }
+    });
+}
+</script>
+<script>
+// передаем пустые игры из Python в JS
+const emptyGames = {{ data | tojson }};
+const emptyGamesList = [];
+for (let game in emptyGames) {
+    if (Object.keys(emptyGames[game]).length === 0) {
+        emptyGamesList.push(game);
+    }
+}
+
+document.getElementById('show-empty-btn').addEventListener('click', () => {
+    const emptyGamesDiv = document.getElementById('empty-games');
+    if (emptyGamesDiv.style.display === 'none') {
+        emptyGamesDiv.style.display = 'grid';
+        emptyGamesList.forEach(game => {
+            const div = document.createElement('div');
+            div.className = 'cheat-page-link';
+            div.innerHTML = `
+                <div class="cheats-category-card">
+                    <h2>${game}</h2>
+                    <p style="color:#aaa;">Нет активных читов</p>
+                </div>
+            `;
+            emptyGamesDiv.appendChild(div);
+        });
+    } else {
+        emptyGamesDiv.style.display = 'none';
+        emptyGamesDiv.innerHTML = '';
+    }
+});
+</script>
+<script>
+document.getElementById("search").addEventListener("input", function() {
+    let query = this.value.toLowerCase();
+    document.querySelectorAll(".cheat-page-link").forEach(card => {
+        let title = card.getAttribute("title").toLowerCase();
+        if (title.includes(query)) {
+            card.style.display = "block";
+        } else {
+            card.style.display = "none";
+        }
+    });
+});
+</script>
+</body>
+</html>

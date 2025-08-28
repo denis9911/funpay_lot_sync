@@ -1,0 +1,6 @@
+.env
+__pycache__
+etc*
+static/images
+*.json
+sync_lot_statuses.log

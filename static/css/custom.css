@@ -1,0 +1,121 @@
+body {
+    background: url('/static/images/bg.jpg') no-repeat center center fixed;
+    background-size: cover;
+    backdrop-filter: blur(5px);
+    color: #fff;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.soft-panel {
+    padding: 30px;
+    max-width: 1400px;
+    margin: auto;
+    border-radius: 10px;
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.cheat-page-link {
+    display: block;
+    height: 100%;
+}
+
+.cheats-category-card {
+    width: 90%;
+    min-height: 300px;
+    padding: 15px;
+    border-radius: 10px;
+    background-color: rgba(26, 26, 26, 10);
+    background-size: 200px; /* размер фоновой картинки */
+    background-position: bottom right;
+    background-repeat: no-repeat;
+    text-shadow: 2px 2px #000;
+    border: 1px solid #444; /* рамка */
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.cheats-category-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+}
+
+.cheats-category-card h2 {
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.cheats-category-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.cheats-category-card li {
+    margin: 6px 0;
+}
+
+.cheats-category-card a {
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.game-icon {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    width: 50px;
+    height: 50px;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.input-group {
+    display: flex;
+    justify-content: center;
+    margin: 30px auto;
+    max-width: 600px; /* или 100% при необходимости */
+    width: 100%;
+}
+
+.input-group input {
+    flex: 1;
+    padding: 12px 20px;
+    border: 2px solid #555;
+    border-radius: 10px;
+    outline: none;
+    font-size: 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background-color: rgba(30,30,30,0.9);
+    color: #fff;
+}
+
+.input-group input::placeholder {
+    color: #aaa;
+}
+
+.input-group input:focus {
+    border-color: #00afff;
+    box-shadow: 0 0 10px rgba(0, 175, 255, 0.5);
+}
+
+.empty-game-btn {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background-color: rgba(26,26,26,0.9);
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+.empty-game-btn:hover {
+    background-color: rgba(0, 175, 255, 0.2);
+    box-shadow: 0 0 10px rgba(0, 175, 255, 0.5);
+}
