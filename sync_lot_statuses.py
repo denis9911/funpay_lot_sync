@@ -52,6 +52,15 @@ def sync_statuses():
                 logger.info(f"Пропуск {game}/{product_name}: нет лотов.")
                 continue
 
+            # Статус продукта из statuses.json
+            product_status = status_data.get(game, {}).get(product_name)
+            if product_status is None:
+                logger.warning(f"⚠ Нет статуса для {game}/{product_name} в {STATUS_FILE}, пропуск.")
+                continue
+
+            # Если Undetected → должны быть активны, иначе выключены
+            should_be_active = (product_status == "Undetected")
+
             for lot in lots:
                 lot_name = lot.get("name")
                 lot_url = lot.get("url")
@@ -60,37 +69,31 @@ def sync_statuses():
                     logger.warning(f"Пропуск некорректного лота в {game}/{product_name}.")
                     continue
 
-                merged_active = lot.get("active", False)
-                current_status = status_data.get(lot_name)
-
                 actual_active = is_lot_active(lot_url)
                 if actual_active is None:
                     logger.warning(f"Не удалось определить статус лота: {lot_name}")
                     continue
 
-                # Проверяем merged.json
-                if merged_active != actual_active:
-                    lot["active"] = actual_active
-                    updated = True
-                    logger.info(f"🔄 Исправлен статус в merged.json: {lot_name} → {'active' if actual_active else 'inactive'}")
-
-                # Если статус в status.json не совпадает с реальным → меняем
-                if current_status != ("active" if actual_active else "inactive"):
-                    if actual_active:
+                # Проверка: совпадает ли реальный статус с тем, что требуется
+                if actual_active != should_be_active:
+                    if should_be_active:
                         activate_lot(lot_url)
-                        status_data[lot_name] = "active"
                         lot["active"] = True
-                        logger.info(f"✅ Активирован лот: {lot_name}")
+                        logger.info(f"✅ Активирован лот: {lot_name} (статус продукта {product_status})")
                     else:
                         deactivate_lot(lot_url)
-                        status_data[lot_name] = "inactive"
                         lot["active"] = False
-                        logger.info(f"⛔ Деактивирован лот: {lot_name}")
+                        logger.info(f"⛔ Деактивирован лот: {lot_name} (статус продукта {product_status})")
                     updated = True
+                else:
+                    # Если в merged.json записано не то → исправляем
+                    if lot.get("active") != actual_active:
+                        lot["active"] = actual_active
+                        updated = True
+                        logger.info(f"🔄 Исправлен флаг active в merged.json для: {lot_name}")
 
     if updated:
         save_json(MERGED_FILE, merged_data)
-        save_json(STATUS_FILE, status_data)
         logger.info("✅ Файлы обновлены")
 
     logger.info("🏁 Проверка завершена")
