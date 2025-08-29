@@ -1,83 +1,103 @@
 import json
 import logging
-import time
 from sync_lot_utils.checkbox_manipulator import deactivate_lot, activate_lot, is_lot_active
-from sync_lot_utils.status_parser import update_status_file
 
 MERGED_FILE = "merged.json"
 STATUS_FILE = "status.json"
 LOG_FILE = "sync_lot_statuses.log"
 
-# Логгер для терминала (все информационные сообщения)
-console_logger = logging.getLogger("console_logger")
-console_logger.setLevel(logging.INFO)
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
-console_logger.addHandler(console_handler)
+# Настройка логирования
+logger = logging.getLogger("sync_lot")
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s - %(message)s")
 
-# Логгер для файла (только важные события)
-file_logger = logging.getLogger("file_logger")
-file_logger.setLevel(logging.INFO)
 file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
-file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
-file_logger.addHandler(file_handler)
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
 
 
-def load_json(file_path):
+def load_json(filename):
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(filename, "r", encoding="utf-8") as f:
             return json.load(f)
-    except Exception as e:
-        file_logger.error(f"Ошибка загрузки {file_path}: {e}")
+    except FileNotFoundError:
+        return {}
+    except json.JSONDecodeError:
+        logger.error(f"Ошибка чтения {filename}")
         return {}
 
 
-def sync_lots():
-    merged = load_json(MERGED_FILE)
-    statuses = load_json(STATUS_FILE)
+def save_json(filename, data):
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
 
-    for game, products in merged.items():
+
+def sync_statuses():
+    logger.info("🚀 Старт проверки лотов")
+    merged_data = load_json(MERGED_FILE)
+    status_data = load_json(STATUS_FILE)
+    updated = False
+
+    for game, products in merged_data.items():
+        if not products or not isinstance(products, dict):
+            logger.info(f"Пропуск {game}: нет товаров.")
+            continue
+
         for product_name, lots in products.items():
-            desired_status = statuses.get(game, {}).get(product_name, "Missing")
+            if not lots or not isinstance(lots, list):
+                logger.info(f"Пропуск {game}/{product_name}: нет лотов.")
+                continue
 
             for lot in lots:
+                lot_name = lot.get("name")
                 lot_url = lot.get("url")
-                if not lot_url:
+
+                if not lot_name or not lot_url:
+                    logger.warning(f"Пропуск некорректного лота в {game}/{product_name}.")
                     continue
 
-                try:
-                    current_active = is_lot_active(lot_url)
-                except Exception as e:
-                    file_logger.error(f"[{game} / {product_name}] Ошибка проверки статуса: {e}")
+                merged_active = lot.get("active", False)
+                current_status = status_data.get(lot_name)
+
+                actual_active = is_lot_active(lot_url)
+                if actual_active is None:
+                    logger.warning(f"Не удалось определить статус лота: {lot_name}")
                     continue
 
-                should_be_active = desired_status == "Undetected"
+                # Проверяем merged.json
+                if merged_active != actual_active:
+                    lot["active"] = actual_active
+                    updated = True
+                    logger.info(f"🔄 Исправлен статус в merged.json: {lot_name} → {'active' if actual_active else 'inactive'}")
 
-                # Вывод в терминал только один раз
-                console_logger.info(
-                    f"[{game} / {product_name}] Лот {lot.get('name')}, "
-                    f"текущий статус: {'active' if current_active else 'inactive'}, "
-                    f"желаемый: {'active' if should_be_active else 'inactive'}"
-                )
+                # Если статус в status.json не совпадает с реальным → меняем
+                if current_status != ("active" if actual_active else "inactive"):
+                    if actual_active:
+                        activate_lot(lot_url)
+                        status_data[lot_name] = "active"
+                        lot["active"] = True
+                        logger.info(f"✅ Активирован лот: {lot_name}")
+                    else:
+                        deactivate_lot(lot_url)
+                        status_data[lot_name] = "inactive"
+                        lot["active"] = False
+                        logger.info(f"⛔ Деактивирован лот: {lot_name}")
+                    updated = True
 
-                if current_active != should_be_active:
-                    file_logger.info(
-                        f"[{game} / {product_name}] Лот {lot.get('name')} не в нужном статусе, "
-                        f"текущий: {'active' if current_active else 'inactive'}, "
-                        f"будет изменён на: {'active' if should_be_active else 'inactive'}"
-                    )
-                    try:
-                        if should_be_active:
-                            activate_lot(lot_url)
-                        else:
-                            deactivate_lot(lot_url)
-                        lot["active"] = should_be_active
-                    except Exception as e:
-                        file_logger.error(f"[{game} / {product_name}] Ошибка при изменении статуса {lot_url}: {e}")
+    if updated:
+        save_json(MERGED_FILE, merged_data)
+        save_json(STATUS_FILE, status_data)
+        logger.info("✅ Файлы обновлены")
 
-                time.sleep(1.5)
+    logger.info("🏁 Проверка завершена")
 
 
 if __name__ == "__main__":
-    sync_lots()
-    update_status_file()
+    try:
+        sync_statuses()
+    except Exception as e:
+        logger.error(f"Ошибка в работе: {e}")

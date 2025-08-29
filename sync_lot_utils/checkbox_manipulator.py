@@ -33,12 +33,12 @@ def safe_get(url, max_retries=5):
         resp = session.get(url)
         logger.info(f"GET {url} -> {resp.status_code}")
         if resp.status_code == 429:
-            wait = 5 * (attempt + 1) + random.uniform(0, 2)
+            wait = 5 * (attempt + 1) + random.uniform(0, 1)
             logger.warning(f"429 Too Many Requests, жду {wait:.1f}s")
             time.sleep(wait)
             continue
         # Всегда делаем небольшую паузу после запроса
-        time.sleep(random.uniform(2, 4))
+        time.sleep(random.uniform(0,1))
         return resp
     logger.error(f"Не удалось получить {url} после {max_retries} попыток")
     return None
@@ -50,11 +50,11 @@ def safe_post(url, data, max_retries=5):
         resp = session.post(url, data=data)
         logger.info(f"POST {url} -> {resp.status_code}")
         if resp.status_code == 429:
-            wait = 5 * (attempt + 1) + random.uniform(0, 2)
+            wait = 5 * (attempt + 1) + random.uniform(0, 1)
             logger.warning(f"429 Too Many Requests при POST, жду {wait:.1f}s")
             time.sleep(wait)
             continue
-        time.sleep(random.uniform(2, 4))
+        time.sleep(random.uniform(0, 1))
         return resp
     logger.error(f"Не удалось отправить POST на {url} после {max_retries} попыток")
     return None
